@@ -4,7 +4,7 @@ A "library" for completing Xbox Security Method 3 challenges used by the Xbox 36
 
 ## What this does
 
-This library allows an Xbox 360 controller emulator to authenticate with retail consoles.
+This library allows an XInput controller emulator to authenticate with retail consoles.
 
 ## TODO
 
@@ -34,26 +34,43 @@ Being used in a handler for setup requests for the XSM3 interface descriptor
 
 ```c
 #include "xsm3.h"
-void xsm3_setup_request_handler(usb_setup_request* ctrl) {
-    switch (ctrl->bRequest) {
-        case 0x81:
-            xsm3_initialise_state();
-            xsm3_set_identification_data(xsm3_id_data_ms_controller);
-            ctrl->send_data(xsm3_id_data_ms_controller);
+
+xsm3_handle_t xsm3; // XSM3 handle for state tracking/buffers, user allocated
+
+void xinput_initialize(void) {
+    xsm3_init(
+        &xsm3, // Required: Pointer to xsm3 handle
+        get_random_32, // Required: Random number generation function, 8 bit or higher
+        printf, // Optional: Print function for internal logging, can be NULL
+        idVendor, // Optional: USB VID, can be 0
+        idProduct, // Optional: USB PID, can be 0
+        NULL // Optional: Serial number array, can be NULL
+    );
+}
+
+bool xinput_setup_request_handler(usb_setup_request* req, const uint8_t* req_payload) {
+    switch (req->bmRequestType & (USB_REQ_TYPE_Msk | USB_REQ_RECIPIENT_Msk)) {
+    case USB_REQ_TYPE_VENDOR | USB_REQ_RECIPIENT_INTERFACE:
+        switch (req->bmRequestType & USB_REQ_DIR_Msk) {
+        case USB_REQ_DIR_DEVTOHOST: // Device to host
+            {
+            uint8_t* response = NULL;
+            uint16_t length = 0;
+            if (xsm3_get_response(&xsm3, req->bmRequestType, req->bRequest, &response, &length)) {
+                usb_send_control_response(response, length);
+                return true; // Request handled
+            }
+            }
             break;
-        case 0x82:
-            xsm3_do_challenge_init(ctrl->in_data);
+        case USB_REQ_DIR_HOSTTODEV: // Host to device
+            if (xsm3_set_request(&xsm3, req->bmRequestType, req->bRequest, req_payload)) {
+                return true; // Request handled
+            }
             break;
-        case 0x87:
-            xsm3_do_challenge_verify(ctrl->in_data);
+        default:
             break;
-        case 0x83:
-            ctrl->send_data(xsm3_challenge_response);
-            break;
-        case 0x86:
-            short state = 2; // 1 = in-progress, 2 = complete
-            ctrl->send_data(&state);
-            break;
+        }
     }
+    return false; // Stall or handle other requests
 }
 ```

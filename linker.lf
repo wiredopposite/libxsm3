@@ -1,0 +1,4 @@
+[mapping:libxsm3]
+archive: libxsm3.a
+entries:
+    * (noflash)

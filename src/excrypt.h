@@ -1,19 +1,20 @@
 #ifndef EXCRYPT_H_
 #define EXCRYPT_H_
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include <stdint.h>
 
 #if(__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
 #define SWAP16(i) i
 #define SWAP32(i) i
 #define SWAP64(i) i
 #else
-#define SWAP16(i) ((((i) & 0xFF) << 8 | ((i) >> 8) & 0xFF) & 0xFFFF)
-#define SWAP32(i) (((i) & 0xff) << 24 | ((i) & 0xff00) << 8 | ((i) & 0xff0000) >> 8 | ((i) >> 24) & 0xff)
-#define SWAP64(i) (SWAP32((i) & 0xFFFFFFFF) << 32 | SWAP32(((i) >> 32) & 0xFFFFFFFF))
+#define SWAP16(i) (((((i) & 0xFF) << 8) | (((i) >> 8) & 0xFF)) & 0xFFFF)
+#define SWAP32(i) (((((i) & 0xff) << 24) | (((i) & 0xff00) << 8) | (((i) & 0xff0000) >> 8) | (((i) >> 24) & 0xff)))
+#define SWAP64(i) ((SWAP32((i) & 0xFFFFFFFF) << 32) | SWAP32(((i) >> 32) & 0xFFFFFFFF))
 #endif
 
 #define U8V(data) ((uint8_t)(data) & 0xFF)
@@ -32,6 +33,7 @@ typedef int BOOL;
 #include "excrypt_des.h"
 #include "excrypt_sha.h"
 #include "excrypt_parve.h"
+
 #ifdef __cplusplus
 }
 #endif
