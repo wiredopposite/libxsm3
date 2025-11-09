@@ -50,7 +50,9 @@ void xinput_initialize(void) {
 
 bool xinput_setup_request_handler(usb_setup_request* req, const uint8_t* req_payload) {
     switch (req->bmRequestType & (USB_REQ_TYPE_Msk | USB_REQ_RECIPIENT_Msk)) {
-    case USB_REQ_TYPE_VENDOR | USB_REQ_RECIPIENT_INTERFACE:
+    case USB_REQ_TYPE_VENDOR | USB_REQ_RECIPIENT_INTERFACE: 
+        // Auth is interface number 3 if using full config descriptor 
+        // (0 xinput, 1 headset, 2 plugin/chatpad, 3 auth)
         switch (req->bmRequestType & USB_REQ_DIR_Msk) {
         case USB_REQ_DIR_DEVTOHOST: // Device to host
             {

@@ -28,7 +28,7 @@
 extern "C" {
 #endif
 
-typedef uint32_t(*xsm3_get_rand_cb_t)(void);
+typedef uint32_t(*xsm3_get_rand32_cb_t)(void);
 typedef int(*xsm3_printf_cb_t)(const char* fmt, ...);
 
 typedef struct _xsm3_handle_t {
@@ -47,13 +47,60 @@ typedef struct _xsm3_handle_t {
     uint8_t rnd_controller_data[0x10];
     uint8_t challenge_init_hash[0x14];
     uint16_t state;
-    xsm3_get_rand_cb_t get_rand_cb;
+    xsm3_get_rand32_cb_t get_rand_cb;
     xsm3_printf_cb_t printf_cb;
 } xsm3_handle_t;
 
-bool xsm3_init(xsm3_handle_t* hxsm3, xsm3_get_rand_cb_t get_rand_cb, xsm3_printf_cb_t printf_cb, uint16_t vid, uint16_t pid, const uint8_t serial[20]);
-bool xsm3_get_response(xsm3_handle_t* hxsm3, uint8_t bmRequestType, uint8_t bRequest, uint8_t** resp, uint16_t* resp_len);
+typedef struct {
+    xsm3_get_rand32_cb_t get_rand32_cb;  /* Required callback to get random 32-bit values */
+    xsm3_printf_cb_t     printf_cb;      /* Optional callback for debug logging, can be NULL */
+    uint16_t             vid;            /* Optional custom USB Vendor ID, can be 0 */
+    uint16_t             pid;            /* Optional custom USB Product ID, can be 0 */
+    const uint8_t*       serial;         /* Optional >= 20-byte serial number, mem doesn't need to persist after initialization, can be NULL */
+} xsm3_init_cfg_t;
+
+/**
+ * @brief Initialize XSM3 handle and auth state
+ *
+ * @param hxsm3 Pointer to XSM3 handle to initialize
+ * @param init_cfg Pointer to initialization configuration
+ * 
+ * @return true on success, false on error
+ */
+bool xsm3_init(xsm3_handle_t* hxsm3, const xsm3_init_cfg_t* init_cfg);
+
+/**
+ * @brief Handle VENDOR + INTERFACE, device to host requests
+ *
+ * @param hxsm3 Pointer to initialized XSM3 handle
+ * @param bmRequestType USB request type
+ * @param bRequest USB request ID
+ * @param resp_len Pointer to output response length
+ * 
+ * @return Response data pointer, or NULL on error or unknown request
+ */
+const uint8_t* xsm3_get_response(xsm3_handle_t* hxsm3, uint8_t bmRequestType, uint8_t bRequest, uint16_t* resp_len);
+
+/**
+ * @brief Handle VENDOR + INTERFACE, host to device requests
+ *
+ * @param hxsm3 Pointer to initialized XSM3 handle
+ * @param bmRequestType USB request type
+ * @param bRequest USB request ID
+ * @param req_data Pointer to the request payload received from host, can be NULL if request has no data
+ * 
+ * @return true on request handled, false if unknown request or error
+ */
 bool xsm3_set_request(xsm3_handle_t* hxsm3, uint8_t bmRequestType, uint8_t bRequest, const uint8_t* req_data);
+
+/**
+ * @brief Get a pointer to a USB string descriptor for the XInput XSM3 interface
+ *
+ * @param desc_len Pointer to output descriptor length
+ * 
+ * @return Pointer to the requested string descriptor.
+ */
+const uint8_t* xsm3_get_xsm3_desc_string(uint16_t* desc_len);
 
 #ifdef __cplusplus
 }
